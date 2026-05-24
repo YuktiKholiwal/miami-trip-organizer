@@ -1,0 +1,100 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-sand text-plum font-sans antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 90% -10%, rgba(255, 61, 138, 0.18), transparent 60%),
+    radial-gradient(900px 500px at -10% 10%, rgba(255, 126, 95, 0.22), transparent 60%),
+    radial-gradient(800px 600px at 50% 110%, rgba(255, 184, 154, 0.25), transparent 60%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  .card {
+    @apply rounded-3xl bg-white/70 backdrop-blur-xl border border-white/60 shadow-soft;
+  }
+  .card-pop {
+    @apply rounded-3xl bg-white/80 backdrop-blur-xl border border-white/70 shadow-glow;
+  }
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium tracking-wide;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all;
+  }
+  .btn-primary {
+    @apply btn bg-plum text-cream hover:bg-ink shadow-soft;
+  }
+  .btn-ghost {
+    @apply btn bg-white/60 text-plum hover:bg-white border border-white;
+  }
+  .btn-sunset {
+    @apply btn text-white shadow-glow;
+    background-image: linear-gradient(120deg, #FF7E5F 0%, #FF3D8A 100%);
+  }
+  .field {
+    @apply w-full rounded-xl bg-white/70 border border-white px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-flamingo/40 placeholder:text-plum/40;
+  }
+  .icon-btn {
+    @apply inline-flex items-center justify-center w-8 h-8 rounded-full text-plum/40 hover:text-flamingo hover:bg-flamingo/10 active:bg-flamingo/15 transition;
+  }
+  .h-display {
+    @apply font-display font-semibold tracking-tight text-plum;
+  }
+  .section-title {
+    @apply h-display text-2xl sm:text-4xl;
+  }
+  .tab-link {
+    @apply flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] uppercase tracking-[0.15em] text-plum/50 transition;
+    min-height: 56px;
+  }
+  .tab-link[aria-current="page"] {
+    @apply text-flamingo;
+  }
+  .tab-link .tab-emoji {
+    @apply text-xl leading-none;
+  }
+  .tab-link[aria-current="page"] .tab-emoji {
+    @apply scale-110;
+  }
+}
+
+@layer utilities {
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pb-nav {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+  .bottom-safe {
+    bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* On touch devices, always reveal the row-hover delete buttons that
+   pages mark with `.touch-show` — pointer hover doesn't fire on mobile. */
+@media (hover: none) {
+  .touch-show {
+    opacity: 1 !important;
+  }
+}
+
+::selection {
+  background: #FF3D8A33;
+  color: #2B1437;
+}
