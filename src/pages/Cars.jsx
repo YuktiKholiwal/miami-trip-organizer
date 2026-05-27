@@ -84,7 +84,8 @@ export default function Cars() {
                 <input
                   value={c.label}
                   onChange={(e) => editCar(c.id, "label", e.target.value)}
-                  className="font-display text-xl text-plum bg-transparent focus:outline-none border-b border-transparent focus:border-flamingo/40 w-full"
+                  placeholder="Car label"
+                  className="field-line font-display text-xl text-plum"
                 />
               </div>
 

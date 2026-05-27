@@ -48,7 +48,22 @@ body {
     background-image: linear-gradient(120deg, #FF7E5F 0%, #FF3D8A 100%);
   }
   .field {
-    @apply w-full rounded-xl bg-white/70 border border-white px-3 py-2.5 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-flamingo/40 placeholder:text-plum/40;
+    @apply w-full rounded-xl bg-white border border-plum/15 px-3 py-2.5 text-base sm:text-sm text-plum
+      hover:border-plum/25
+      focus:outline-none focus:border-flamingo focus:ring-4 focus:ring-flamingo/15
+      placeholder:text-plum/50;
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+  }
+  .field-line {
+    @apply w-full bg-white/40 rounded-md px-2 py-1
+      border-b-2 border-plum/15
+      hover:bg-white hover:border-plum/35
+      focus:outline-none focus:bg-white focus:border-flamingo
+      placeholder:text-plum/45;
+    transition: background-color 120ms ease, border-color 120ms ease;
+  }
+  .field-label {
+    @apply text-[11px] uppercase tracking-[0.2em] text-plum/60 font-medium;
   }
   .icon-btn {
     @apply inline-flex items-center justify-center w-8 h-8 rounded-full text-plum/40 hover:text-flamingo hover:bg-flamingo/10 active:bg-flamingo/15 transition;

@@ -51,13 +51,14 @@ export default function Stay() {
             <input
               value={s.name}
               onChange={(e) => editStay("name", e.target.value)}
-              className="mt-2 w-full font-display text-2xl sm:text-4xl text-plum bg-transparent focus:outline-none border-b border-transparent focus:border-flamingo/40"
+              placeholder="Hotel name"
+              className="field-line mt-2 font-display text-2xl sm:text-4xl text-plum"
             />
             <input
               value={s.address}
               onChange={(e) => editStay("address", e.target.value)}
               placeholder="Address"
-              className="mt-2 w-full text-sm text-plum/70 bg-transparent focus:outline-none placeholder:text-plum/30"
+              className="field-line mt-2 text-sm text-plum/80"
             />
             <a
               href={`https://maps.google.com/?q=${encodeURIComponent(s.address || s.name)}`}
@@ -115,7 +116,8 @@ export default function Stay() {
               <input
                 value={room.name}
                 onChange={(e) => editRoom(room.id, "name", e.target.value)}
-                className="font-display text-xl text-plum bg-transparent focus:outline-none border-b border-transparent focus:border-flamingo/40 w-full"
+                placeholder="Room name"
+                className="field-line font-display text-xl text-plum"
               />
               <div className="text-xs text-plum/50 mt-1">{room.occupants.length} in this room</div>
 

@@ -58,13 +58,14 @@ export default function Crew() {
             <input
               value={p.name}
               onChange={(e) => editPerson(p.id, "name", e.target.value)}
-              className="mt-3 w-full font-display text-xl text-plum bg-transparent focus:outline-none border-b border-transparent focus:border-flamingo/40"
+              placeholder="Name"
+              className="field-line mt-3 font-display text-xl text-plum"
             />
             <input
               value={p.role}
               onChange={(e) => editPerson(p.id, "role", e.target.value)}
               placeholder="role / nickname"
-              className="mt-1 w-full text-xs text-plum/60 bg-transparent focus:outline-none placeholder:text-plum/30"
+              className="field-line mt-1 text-xs text-plum/70"
             />
             <div className="mt-3 flex items-center gap-1 flex-wrap">
               {emojis.slice(0, 9).map((e) => (

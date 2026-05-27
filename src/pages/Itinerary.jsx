@@ -73,12 +73,14 @@ export default function Itinerary() {
                 <input
                   value={day.title}
                   onChange={(e) => editDay(day.id, "title", e.target.value)}
-                  className="mt-1 font-display text-3xl text-plum bg-transparent focus:outline-none border-b border-transparent focus:border-flamingo/40"
+                  placeholder="Day title"
+                  className="field-line mt-1 font-display text-3xl text-plum"
                 />
                 <input
                   value={day.vibe}
                   onChange={(e) => editDay(day.id, "vibe", e.target.value)}
-                  className="block mt-1 italic text-flamingo bg-transparent focus:outline-none"
+                  placeholder="vibe of the day"
+                  className="field-line mt-2 italic text-flamingo"
                 />
               </div>
               <button onClick={() => addEvent(day.id)} className="btn-ghost text-xs">+ event</button>
@@ -93,26 +95,27 @@ export default function Itinerary() {
                       value={e.time}
                       onChange={(ev) => editEvent(day.id, e.id, "time", ev.target.value)}
                       placeholder="time"
-                      className="col-span-3 sm:col-span-2 text-sm font-mono text-plum bg-transparent focus:outline-none placeholder:text-plum/30"
+                      className="field-line col-span-3 sm:col-span-2 text-sm font-mono text-plum"
                     />
-                    <div className="col-span-9 sm:col-span-10">
+                    <div className="col-span-9 sm:col-span-10 space-y-1.5">
                       <input
                         value={e.title}
                         onChange={(ev) => editEvent(day.id, e.id, "title", ev.target.value)}
-                        className="w-full font-display text-lg text-plum bg-transparent focus:outline-none"
+                        placeholder="What's the plan?"
+                        className="field-line font-display text-lg text-plum"
                       />
-                      <div className="flex flex-wrap gap-3 mt-1">
+                      <div className="flex flex-wrap gap-2">
                         <input
                           value={e.location}
                           onChange={(ev) => editEvent(day.id, e.id, "location", ev.target.value)}
                           placeholder="📍 location"
-                          className="text-sm text-plum/70 bg-transparent focus:outline-none placeholder:text-plum/30"
+                          className="field-line text-sm text-plum/80 max-w-[220px]"
                         />
                         <input
                           value={e.notes}
                           onChange={(ev) => editEvent(day.id, e.id, "notes", ev.target.value)}
                           placeholder="notes…"
-                          className="flex-1 min-w-[120px] text-sm text-plum/50 bg-transparent focus:outline-none placeholder:text-plum/30"
+                          className="field-line flex-1 min-w-[140px] text-sm text-plum/70"
                         />
                       </div>
                     </div>

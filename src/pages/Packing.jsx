@@ -102,12 +102,13 @@ export default function Packing() {
                 <input
                   value={cat.emoji}
                   onChange={(e) => editCategory(cat.id, "emoji", e.target.value)}
-                  className="w-9 text-xl bg-transparent focus:outline-none"
+                  className="field-line w-11 text-xl text-center"
                 />
                 <input
                   value={cat.title}
                   onChange={(e) => editCategory(cat.id, "title", e.target.value)}
-                  className="flex-1 font-display text-lg text-plum bg-transparent focus:outline-none border-b border-transparent focus:border-flamingo/40"
+                  placeholder="Category name"
+                  className="field-line flex-1 font-display text-lg text-plum"
                 />
                 <span className="text-xs text-plum/50 tabular-nums">{done}/{cat.items.length}</span>
               </div>
@@ -128,7 +129,8 @@ export default function Packing() {
                     <input
                       value={it.label}
                       onChange={(e) => editItem(cat.id, it.id, e.target.value)}
-                      className={`flex-1 text-sm bg-transparent focus:outline-none ${
+                      placeholder="Item"
+                      className={`field-line flex-1 text-sm ${
                         it.done ? "line-through text-plum/40" : "text-plum"
                       }`}
                     />
