@@ -25,17 +25,25 @@ const mergeWithSeed = (incoming) => {
 };
 
 const seedJson = JSON.stringify(seedTrip);
+// How long we keep an unacknowledged write in the pending-echo set before
+// giving up. Anything within this window is treated as "ours" if the
+// realtime payload matches.
+const ECHO_TTL_MS = 60_000;
 
 export function TripProvider({ children }) {
   const [trip, setTrip] = useState(loadLocal);
   const [syncState, setSyncState] = useState(supabaseEnabled ? "connecting" : "local");
-  // JSON of the last value we know is in sync with the DB. Used to:
-  //  - ignore realtime echoes of our own writes (no timing window needed)
-  //  - skip no-op saves when nothing meaningful changed
+  // The latest snapshot we've written or accepted as authoritative.
+  // Used to skip no-op saves and to recognize duplicate echoes.
   const lastSyncedJson = useRef("");
+  // Every JSON snapshot we've written that we haven't yet seen echo back.
+  // Multiple writes can be in flight at once if the network is slow, so
+  // a single "latest" pointer is not enough — we have to track all of them.
+  // Map<json, expiresAtMs>
+  const pendingEchoes = useRef(new Map());
   const saveTimer = useRef(null);
-  // Keeps a live reference to the current trip so async paths can read
-  // it without going through a stale closure.
+  // A live mirror of `trip` so async paths can read the current value
+  // without going through a stale closure.
   const tripRef = useRef(trip);
 
   useEffect(() => {
@@ -47,6 +55,13 @@ export function TripProvider({ children }) {
   useEffect(() => {
     if (!supabaseEnabled) return;
     let active = true;
+
+    const prunePending = () => {
+      const now = Date.now();
+      for (const [k, exp] of pendingEchoes.current) {
+        if (exp < now) pendingEchoes.current.delete(k);
+      }
+    };
 
     (async () => {
       const { data, error } = await supabase
@@ -65,22 +80,23 @@ export function TripProvider({ children }) {
       if (data?.data) {
         const remoteJson = JSON.stringify(data.data);
         // Use functional update so we compare against the CURRENT local
-        // state (the user may have made edits during the fetch).
+        // state — the user may have edited things during the fetch.
         setTrip((prev) => {
           const localJson = JSON.stringify(prev);
           lastSyncedJson.current = remoteJson;
           if (localJson === remoteJson) return prev;
-          // Local was untouched seed -> safe to adopt remote.
+          // Local is just the seed (untouched) — adopt remote.
           if (localJson === seedJson) return mergeWithSeed(data.data);
-          // Local has user edits — keep them. The save effect will
-          // push them up because trip !== lastSyncedJson.
+          // Local has user edits — keep them; the save effect will push
+          // them up because trip !== lastSyncedJson.
           return prev;
         });
       } else {
-        // No remote row yet: push current local up to seed it.
+        // No remote row — seed it from current local state.
         const current = tripRef.current;
         const currentJson = JSON.stringify(current);
         lastSyncedJson.current = currentJson;
+        pendingEchoes.current.set(currentJson, Date.now() + ECHO_TTL_MS);
         const { error: upErr } = await supabase
           .from("trips")
           .upsert({ id: TRIP_KEY, data: current, updated_at: new Date().toISOString() });
@@ -102,8 +118,15 @@ export function TripProvider({ children }) {
           const remote = payload.new?.data;
           if (!remote) return;
           const remoteJson = JSON.stringify(remote);
-          // Echo of our own write — we already have this state.
+          prunePending();
+          // Echo of a write we initiated (any still-pending one).
+          if (pendingEchoes.current.has(remoteJson)) {
+            pendingEchoes.current.delete(remoteJson);
+            return;
+          }
+          // Already reflects current synced state — no-op.
           if (remoteJson === lastSyncedJson.current) return;
+          // Genuine remote change — adopt.
           lastSyncedJson.current = remoteJson;
           setTrip(mergeWithSeed(remote));
         }
@@ -117,21 +140,23 @@ export function TripProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced push to Supabase whenever local trip diverges from what's synced
+  // Debounced push to Supabase whenever local trip diverges from synced state
   useEffect(() => {
     if (!supabaseEnabled) return;
     const tripJson = JSON.stringify(trip);
     if (tripJson === lastSyncedJson.current) return;
+    setSyncState((s) => (s === "error" ? s : "saving"));
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
       lastSyncedJson.current = tripJson;
+      pendingEchoes.current.set(tripJson, Date.now() + ECHO_TTL_MS);
       const { error } = await supabase
         .from("trips")
         .upsert({ id: TRIP_KEY, data: trip, updated_at: new Date().toISOString() });
       if (error) {
         console.warn("Supabase save failed", error);
         setSyncState("error");
-      } else if (syncState !== "synced") {
+      } else {
         setSyncState("synced");
       }
     }, 400);

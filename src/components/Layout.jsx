@@ -23,6 +23,7 @@ const desktopNav = [...primaryTabs.slice(0, 1), ...moreItems.slice(0, 4), ...pri
 const syncBadge = {
   local: { label: "local", color: "bg-cream text-plum/60" },
   connecting: { label: "connecting…", color: "bg-cream text-plum/60" },
+  saving: { label: "saving…", color: "bg-cream text-plum/70" },
   synced: { label: "synced", color: "bg-palm/10 text-palm" },
   error: { label: "offline", color: "bg-flamingo/10 text-flamingo" },
 };
