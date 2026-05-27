@@ -109,6 +109,23 @@ body {
   }
 }
 
+/* Pulsing dot used to mark the "draft pin" position on the Map page
+   before the user saves it. */
+.miami-draft-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #FF3D8A;
+  border: 4px solid white;
+  box-shadow: 0 6px 18px rgba(255, 61, 138, 0.6);
+  animation: miami-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes miami-pulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 6px 18px rgba(255, 61, 138, 0.55); }
+  50% { transform: scale(1.15); box-shadow: 0 8px 26px rgba(255, 61, 138, 0.8); }
+}
+
 ::selection {
   background: #FF3D8A33;
   color: #2B1437;
