@@ -24,14 +24,22 @@ const mergeWithSeed = (incoming) => {
   return base;
 };
 
+const seedJson = JSON.stringify(seedTrip);
+
 export function TripProvider({ children }) {
   const [trip, setTrip] = useState(loadLocal);
   const [syncState, setSyncState] = useState(supabaseEnabled ? "connecting" : "local");
-  const lastWriteSelf = useRef(0);
+  // JSON of the last value we know is in sync with the DB. Used to:
+  //  - ignore realtime echoes of our own writes (no timing window needed)
+  //  - skip no-op saves when nothing meaningful changed
+  const lastSyncedJson = useRef("");
   const saveTimer = useRef(null);
+  // Keeps a live reference to the current trip so async paths can read
+  // it without going through a stale closure.
+  const tripRef = useRef(trip);
 
-  // Persist to localStorage always
   useEffect(() => {
+    tripRef.current = trip;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(trip));
   }, [trip]);
 
@@ -53,11 +61,34 @@ export function TripProvider({ children }) {
         setSyncState("error");
         return;
       }
+
       if (data?.data) {
-        setTrip(mergeWithSeed(data.data));
+        const remoteJson = JSON.stringify(data.data);
+        // Use functional update so we compare against the CURRENT local
+        // state (the user may have made edits during the fetch).
+        setTrip((prev) => {
+          const localJson = JSON.stringify(prev);
+          lastSyncedJson.current = remoteJson;
+          if (localJson === remoteJson) return prev;
+          // Local was untouched seed -> safe to adopt remote.
+          if (localJson === seedJson) return mergeWithSeed(data.data);
+          // Local has user edits — keep them. The save effect will
+          // push them up because trip !== lastSyncedJson.
+          return prev;
+        });
       } else {
-        // Seed remote row from local on first run
-        await supabase.from("trips").upsert({ id: TRIP_KEY, data: trip, updated_at: new Date().toISOString() });
+        // No remote row yet: push current local up to seed it.
+        const current = tripRef.current;
+        const currentJson = JSON.stringify(current);
+        lastSyncedJson.current = currentJson;
+        const { error: upErr } = await supabase
+          .from("trips")
+          .upsert({ id: TRIP_KEY, data: current, updated_at: new Date().toISOString() });
+        if (upErr) {
+          console.warn("Supabase init upsert failed", upErr);
+          setSyncState("error");
+          return;
+        }
       }
       setSyncState("synced");
     })();
@@ -69,10 +100,11 @@ export function TripProvider({ children }) {
         { event: "*", schema: "public", table: "trips", filter: `id=eq.${TRIP_KEY}` },
         (payload) => {
           const remote = payload.new?.data;
-          const updated = new Date(payload.new?.updated_at || 0).getTime();
           if (!remote) return;
-          // Ignore echoes of our own writes within a short window
-          if (updated <= lastWriteSelf.current + 500) return;
+          const remoteJson = JSON.stringify(remote);
+          // Echo of our own write — we already have this state.
+          if (remoteJson === lastSyncedJson.current) return;
+          lastSyncedJson.current = remoteJson;
           setTrip(mergeWithSeed(remote));
         }
       )
@@ -85,21 +117,24 @@ export function TripProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced push to Supabase on changes
+  // Debounced push to Supabase whenever local trip diverges from what's synced
   useEffect(() => {
     if (!supabaseEnabled) return;
+    const tripJson = JSON.stringify(trip);
+    if (tripJson === lastSyncedJson.current) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      const stamp = new Date().toISOString();
-      lastWriteSelf.current = new Date(stamp).getTime();
-      const { error } = await supabase.from("trips").upsert({ id: TRIP_KEY, data: trip, updated_at: stamp });
+      lastSyncedJson.current = tripJson;
+      const { error } = await supabase
+        .from("trips")
+        .upsert({ id: TRIP_KEY, data: trip, updated_at: new Date().toISOString() });
       if (error) {
         console.warn("Supabase save failed", error);
         setSyncState("error");
       } else if (syncState !== "synced") {
         setSyncState("synced");
       }
-    }, 500);
+    }, 400);
     return () => clearTimeout(saveTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip]);
