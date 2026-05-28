@@ -71,15 +71,21 @@ export default function Stay() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-[11px] uppercase tracking-[0.2em] text-plum/60">Check-in</label>
-              <input type="date" className="field mt-1" value={s.checkIn} onChange={(e) => editStay("checkIn", e.target.value)} />
+              <label className="field-label">Check-in</label>
+              <input type="date" className="field" value={s.checkIn} onChange={(e) => editStay("checkIn", e.target.value)} />
             </div>
             <div>
-              <label className="text-[11px] uppercase tracking-[0.2em] text-plum/60">Check-out</label>
-              <input type="date" className="field mt-1" value={s.checkOut} onChange={(e) => editStay("checkOut", e.target.value)} />
+              <label className="field-label">Check-out</label>
+              <input type="date" className="field" value={s.checkOut} onChange={(e) => editStay("checkOut", e.target.value)} />
             </div>
-            <input className="field col-span-2" placeholder="Confirmation #" value={s.confirmation} onChange={(e) => editStay("confirmation", e.target.value)} />
-            <textarea className="field col-span-2 min-h-[80px]" placeholder="Notes" value={s.notes} onChange={(e) => editStay("notes", e.target.value)} />
+            <div className="col-span-2">
+              <label className="field-label">Confirmation #</label>
+              <input className="field" placeholder="ABC123" value={s.confirmation} onChange={(e) => editStay("confirmation", e.target.value)} />
+            </div>
+            <div className="col-span-2">
+              <label className="field-label">Notes</label>
+              <textarea className="field min-h-[80px]" placeholder="Anything to remember" value={s.notes} onChange={(e) => editStay("notes", e.target.value)} />
+            </div>
           </div>
         </div>
       </section>

@@ -24,7 +24,18 @@ const mergeWithSeed = (incoming) => {
   return base;
 };
 
-const seedJson = JSON.stringify(seedTrip);
+// Canonical (key-sorted) JSON serialization. Postgres JSONB does NOT
+// preserve object key order, so a plain JSON.stringify of the data we
+// send won't equal JSON.stringify of the same data when it echoes back
+// over realtime. Sorting keys recursively makes the comparison stable.
+const canonical = (value) => {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+  const keys = Object.keys(value).sort();
+  return "{" + keys.map((k) => JSON.stringify(k) + ":" + canonical(value[k])).join(",") + "}";
+};
+
+const seedJson = canonical(seedTrip);
 // How long we keep an unacknowledged write in the pending-echo set before
 // giving up. Anything within this window is treated as "ours" if the
 // realtime payload matches.
@@ -78,11 +89,11 @@ export function TripProvider({ children }) {
       }
 
       if (data?.data) {
-        const remoteJson = JSON.stringify(data.data);
+        const remoteJson = canonical(data.data);
         // Use functional update so we compare against the CURRENT local
         // state — the user may have edited things during the fetch.
         setTrip((prev) => {
-          const localJson = JSON.stringify(prev);
+          const localJson = canonical(prev);
           lastSyncedJson.current = remoteJson;
           if (localJson === remoteJson) return prev;
           // Local is just the seed (untouched) — adopt remote.
@@ -94,7 +105,7 @@ export function TripProvider({ children }) {
       } else {
         // No remote row — seed it from current local state.
         const current = tripRef.current;
-        const currentJson = JSON.stringify(current);
+        const currentJson = canonical(current);
         lastSyncedJson.current = currentJson;
         pendingEchoes.current.set(currentJson, Date.now() + ECHO_TTL_MS);
         const { error: upErr } = await supabase
@@ -117,7 +128,7 @@ export function TripProvider({ children }) {
         (payload) => {
           const remote = payload.new?.data;
           if (!remote) return;
-          const remoteJson = JSON.stringify(remote);
+          const remoteJson = canonical(remote);
           prunePending();
           // Echo of a write we initiated (any still-pending one).
           if (pendingEchoes.current.has(remoteJson)) {
@@ -143,7 +154,7 @@ export function TripProvider({ children }) {
   // Debounced push to Supabase whenever local trip diverges from synced state
   useEffect(() => {
     if (!supabaseEnabled) return;
-    const tripJson = JSON.stringify(trip);
+    const tripJson = canonical(trip);
     if (tripJson === lastSyncedJson.current) return;
     setSyncState((s) => (s === "error" ? s : "saving"));
     clearTimeout(saveTimer.current);

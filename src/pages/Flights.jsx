@@ -75,42 +75,75 @@ export default function Flights() {
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-flamingo">↘</span>
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-plum/60">Arrival</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-flamingo text-base">↘</span>
+                    <span className="text-[11px] uppercase tracking-[0.2em] text-plum/60 font-medium">Arrival</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <input className="field col-span-2" placeholder="Airline" value={f.arrivalAirline} onChange={(e) => editFlight(f.id, "arrivalAirline", e.target.value)} />
-                    <input className="field" placeholder="Flight #" value={f.arrivalNumber} onChange={(e) => editFlight(f.id, "arrivalNumber", e.target.value)} />
-                    <input className="field" placeholder="From" value={f.arrivalFrom} onChange={(e) => editFlight(f.id, "arrivalFrom", e.target.value)} />
-                    <input type="date" className="field" value={f.arrivalDate} onChange={(e) => editFlight(f.id, "arrivalDate", e.target.value)} />
-                    <input type="time" className="field" value={f.arrivalTime} onChange={(e) => editFlight(f.id, "arrivalTime", e.target.value)} />
+                    <div className="col-span-2">
+                      <label className="field-label">Airline</label>
+                      <input className="field" placeholder="e.g. Delta" value={f.arrivalAirline} onChange={(e) => editFlight(f.id, "arrivalAirline", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Flight #</label>
+                      <input className="field" placeholder="DL 1234" value={f.arrivalNumber} onChange={(e) => editFlight(f.id, "arrivalNumber", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">From</label>
+                      <input className="field" placeholder="JFK, etc" value={f.arrivalFrom} onChange={(e) => editFlight(f.id, "arrivalFrom", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Date</label>
+                      <input type="date" className="field" value={f.arrivalDate} onChange={(e) => editFlight(f.id, "arrivalDate", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Time</label>
+                      <input type="time" className="field" value={f.arrivalTime} onChange={(e) => editFlight(f.id, "arrivalTime", e.target.value)} />
+                    </div>
                   </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-coral">↗</span>
-                    <span className="text-[11px] uppercase tracking-[0.2em] text-plum/60">Departure</span>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-coral text-base">↗</span>
+                    <span className="text-[11px] uppercase tracking-[0.2em] text-plum/60 font-medium">Departure</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <input className="field col-span-2" placeholder="Airline" value={f.departureAirline} onChange={(e) => editFlight(f.id, "departureAirline", e.target.value)} />
-                    <input className="field" placeholder="Flight #" value={f.departureNumber} onChange={(e) => editFlight(f.id, "departureNumber", e.target.value)} />
-                    <input className="field" placeholder="To" value={f.departureTo} onChange={(e) => editFlight(f.id, "departureTo", e.target.value)} />
-                    <input type="date" className="field" value={f.departureDate} onChange={(e) => editFlight(f.id, "departureDate", e.target.value)} />
-                    <input type="time" className="field" value={f.departureTime} onChange={(e) => editFlight(f.id, "departureTime", e.target.value)} />
+                    <div className="col-span-2">
+                      <label className="field-label">Airline</label>
+                      <input className="field" placeholder="e.g. Delta" value={f.departureAirline} onChange={(e) => editFlight(f.id, "departureAirline", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Flight #</label>
+                      <input className="field" placeholder="DL 1234" value={f.departureNumber} onChange={(e) => editFlight(f.id, "departureNumber", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">To</label>
+                      <input className="field" placeholder="JFK, etc" value={f.departureTo} onChange={(e) => editFlight(f.id, "departureTo", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Date</label>
+                      <input type="date" className="field" value={f.departureDate} onChange={(e) => editFlight(f.id, "departureDate", e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="field-label">Time</label>
+                      <input type="time" className="field" value={f.departureTime} onChange={(e) => editFlight(f.id, "departureTime", e.target.value)} />
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <input
-                className="field mt-3"
-                placeholder="Confirmation # (optional)"
-                value={f.confirmation}
-                onChange={(e) => editFlight(f.id, "confirmation", e.target.value)}
-              />
+              <div className="mt-4">
+                <label className="field-label">Confirmation # (optional)</label>
+                <input
+                  className="field"
+                  placeholder="ABC123"
+                  value={f.confirmation}
+                  onChange={(e) => editFlight(f.id, "confirmation", e.target.value)}
+                />
+              </div>
             </div>
           );
         })}

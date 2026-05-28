@@ -112,45 +112,74 @@ export default function Spend() {
         </div>
       </section>
 
-      <section className="card-pop p-6">
-        <h2 className="font-display text-2xl text-plum mb-4">add an expense</h2>
-        <div className="grid sm:grid-cols-12 gap-2">
-          <input
-            className="field sm:col-span-5"
-            placeholder="What was it? (e.g. dinner at Joe's)"
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          />
-          <input
-            type="number"
-            inputMode="decimal"
-            className="field sm:col-span-2"
-            placeholder="$"
-            value={draft.amount}
-            onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
-          />
-          <select
-            className="field sm:col-span-2"
-            value={draft.category}
-            onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-          >
-            {["Food", "Drinks", "Club", "Cab", "Hotel", "Activity", "Misc"].map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-          <select
-            className="field sm:col-span-3"
-            value={draft.paidBy}
-            onChange={(e) => setDraft({ ...draft, paidBy: e.target.value })}
-          >
-            <option value="">paid by…</option>
-            {trip.people.map((p) => (
-              <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
-            ))}
-          </select>
+      <section className="card-pop p-5 sm:p-6">
+        <h2 className="font-display text-2xl text-plum mb-5">add an expense</h2>
+        <div className="grid sm:grid-cols-12 gap-3 sm:gap-4">
+          <div className="sm:col-span-7">
+            <label className="field-label">What was it?</label>
+            <input
+              className="field"
+              placeholder="e.g. dinner at Joe's"
+              value={draft.title}
+              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+            />
+          </div>
+          <div className="sm:col-span-3">
+            <label className="field-label">Amount</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              className="field"
+              placeholder="0.00"
+              value={draft.amount}
+              onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="field-label">Category</label>
+            <select
+              className="field"
+              value={draft.category}
+              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+            >
+              {["Food", "Drinks", "Club", "Cab", "Hotel", "Activity", "Misc"].map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="sm:col-span-12">
+            <label className="field-label">Who paid?</label>
+            <select
+              className="field"
+              value={draft.paidBy}
+              onChange={(e) => setDraft({ ...draft, paidBy: e.target.value })}
+            >
+              <option value="">— pick a person —</option>
+              {trip.people.map((p) => (
+                <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div className="mt-4">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-plum/60 mb-2">split between</div>
+        <div className="mt-5">
+          <div className="flex items-center justify-between mb-2">
+            <label className="field-label !mb-0">Split between</label>
+            <div className="flex gap-1">
+              <button
+                onClick={() => setDraft({ ...draft, splitWith: trip.people.map((p) => p.id) })}
+                className="text-[11px] text-plum/60 hover:text-flamingo uppercase tracking-wider"
+              >
+                all
+              </button>
+              <span className="text-plum/30 text-[11px]">·</span>
+              <button
+                onClick={() => setDraft({ ...draft, splitWith: [] })}
+                className="text-[11px] text-plum/60 hover:text-flamingo uppercase tracking-wider"
+              >
+                none
+              </button>
+            </div>
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {trip.people.map((p) => {
               const on = draft.splitWith.includes(p.id);
@@ -158,7 +187,7 @@ export default function Spend() {
                 <button
                   key={p.id}
                   onClick={() => toggleSplit(p.id)}
-                  className={`pill text-xs ${on ? "bg-plum text-cream" : "bg-white text-plum/70"}`}
+                  className={`pill text-xs transition ${on ? "bg-plum text-cream" : "bg-white text-plum/70 hover:bg-cream"}`}
                 >
                   <span>{p.emoji}</span>
                   <span>{p.name}</span>
@@ -166,8 +195,13 @@ export default function Spend() {
               );
             })}
           </div>
+          {draft.splitWith.length > 0 && draft.amount && !isNaN(parseFloat(draft.amount)) && (
+            <div className="mt-2 text-xs text-plum/60">
+              {money(parseFloat(draft.amount) / draft.splitWith.length)} per person × {draft.splitWith.length}
+            </div>
+          )}
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-5 flex justify-end">
           <button onClick={addExpense} className="btn-sunset">add expense</button>
         </div>
       </section>
