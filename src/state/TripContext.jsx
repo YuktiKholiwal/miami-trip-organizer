@@ -195,9 +195,13 @@ export function TripProvider({ children }) {
 
     const resetAll = () => {
       const input = window.prompt(
-        `Type "science" to reset ALL trip data back to defaults.\n\nThis wipes everyone's edits and can't be undone.`
+        `Enter the secret key to reset ALL trip data back to defaults.\n\n(This wipes everyone's edits and can't be undone.)`
       );
-      if (input == null || input.trim().toLowerCase() !== "science") return;
+      if (input == null) return;
+      if (input.trim().toLowerCase() !== "science") {
+        window.alert("Wrong key — nothing was reset.");
+        return;
+      }
       localStorage.removeItem(STORAGE_KEY);
       setTrip(seedTrip);
     };
