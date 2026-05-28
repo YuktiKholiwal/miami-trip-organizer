@@ -16,7 +16,7 @@ export default function Crew() {
       ...people,
       {
         id: `p_${Math.random().toString(36).slice(2, 8)}`,
-        name: "New friend",
+        name: "",
         emoji: "🌟",
         color: "#FF7E5F",
         role: "",
@@ -30,18 +30,18 @@ export default function Crew() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <header className="flex items-end justify-between gap-4 flex-wrap">
         <div>
           <h1 className="section-title">the crew</h1>
-          <p className="text-plum/60 mt-1">{trip.people.length} people · tap any card to edit.</p>
+          <p className="text-plum/60 mt-1">{trip.people.length} people · tap any card to edit</p>
         </div>
-        <button onClick={addPerson} className="btn-sunset">+ add someone</button>
+        <button onClick={addPerson} className="btn-sunset hidden sm:inline-flex">+ add someone</button>
       </header>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         {trip.people.map((p) => (
-          <div key={p.id} className="card p-5 relative group">
+          <div key={p.id} className="card p-4 sm:p-5 relative group">
             <button
               onClick={() => removePerson(p.id)}
               className="icon-btn touch-show absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition"
@@ -67,14 +67,15 @@ export default function Crew() {
               placeholder="role / nickname"
               className="field-line mt-1 text-xs text-plum/70"
             />
-            <div className="mt-3 flex items-center gap-1 flex-wrap">
+            <div className="mt-3 grid grid-cols-9 gap-1">
               {emojis.slice(0, 9).map((e) => (
                 <button
                   key={e}
                   onClick={() => editPerson(p.id, "emoji", e)}
-                  className={`w-7 h-7 rounded-lg flex items-center justify-center text-sm transition ${
-                    p.emoji === e ? "bg-plum text-cream" : "hover:bg-white"
+                  className={`aspect-square min-h-[32px] rounded-lg flex items-center justify-center text-base transition ${
+                    p.emoji === e ? "bg-plum text-cream" : "hover:bg-white active:bg-cream"
                   }`}
+                  aria-label={`Set emoji ${e}`}
                 >
                   {e}
                 </button>
@@ -82,6 +83,13 @@ export default function Crew() {
             </div>
           </div>
         ))}
+        <button
+          onClick={addPerson}
+          className="card p-4 sm:p-5 border-2 border-dashed border-plum/15 text-plum/50 hover:text-flamingo hover:border-flamingo/40 transition flex flex-col items-center justify-center min-h-[180px] gap-1"
+        >
+          <span className="text-3xl leading-none">＋</span>
+          <span className="text-sm font-medium">add someone</span>
+        </button>
       </div>
     </div>
   );

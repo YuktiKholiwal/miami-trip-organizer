@@ -201,8 +201,8 @@ export default function Spend() {
             </div>
           )}
         </div>
-        <div className="mt-5 flex justify-end">
-          <button onClick={addExpense} className="btn-sunset">add expense</button>
+        <div className="mt-5 sm:flex sm:justify-end">
+          <button onClick={addExpense} className="btn-sunset w-full sm:w-auto">+ add expense</button>
         </div>
       </section>
 

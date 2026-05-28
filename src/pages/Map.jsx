@@ -260,8 +260,8 @@ export default function MapPage() {
               onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
             />
           </div>
-          <div className="mt-3 flex justify-end">
-            <button onClick={savePin} className="btn-sunset">save pin</button>
+          <div className="mt-4 sm:flex sm:justify-end">
+            <button onClick={savePin} className="btn-sunset w-full sm:w-auto">save pin</button>
           </div>
         </section>
       )}

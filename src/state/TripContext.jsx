@@ -137,9 +137,14 @@ export function TripProvider({ children }) {
           }
           // Already reflects current synced state — no-op.
           if (remoteJson === lastSyncedJson.current) return;
-          // Genuine remote change — adopt.
+          // Genuine remote change — adopt. Guard against the merged
+          // result being canonically identical to current local state,
+          // which would otherwise trigger a redundant save cycle.
           lastSyncedJson.current = remoteJson;
-          setTrip(mergeWithSeed(remote));
+          setTrip((prev) => {
+            const merged = mergeWithSeed(remote);
+            return canonical(merged) === canonical(prev) ? prev : merged;
+          });
         }
       )
       .subscribe();

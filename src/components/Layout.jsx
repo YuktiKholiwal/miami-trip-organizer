@@ -77,14 +77,21 @@ export default function Layout({ children }) {
           <div className="ml-auto flex items-center gap-2">
             <span
               className={`pill ${badge.color}`}
-              title={syncState === "synced" ? "Live syncing across devices" : syncState}
+              title={badge.label}
+              aria-label={`sync status: ${badge.label}`}
             >
               <span
                 className={`w-1.5 h-1.5 rounded-full ${
-                  syncState === "synced" ? "bg-palm" : syncState === "error" ? "bg-flamingo" : "bg-plum/40"
+                  syncState === "synced"
+                    ? "bg-palm"
+                    : syncState === "error"
+                    ? "bg-flamingo"
+                    : syncState === "saving"
+                    ? "bg-coral animate-pulse"
+                    : "bg-plum/40"
                 }`}
               />
-              <span className={syncState === "synced" ? "hidden sm:inline" : ""}>{badge.label}</span>
+              <span className={syncState === "error" ? "" : "hidden sm:inline"}>{badge.label}</span>
             </span>
             <button
               onClick={resetAll}
