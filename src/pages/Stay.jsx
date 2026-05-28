@@ -1,4 +1,5 @@
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 export default function Stay() {
   const { trip, update } = useTrip();
@@ -30,6 +31,8 @@ export default function Stay() {
   };
 
   const removeRoom = (id) => {
+    const room = s.rooms.find((r) => r.id === id);
+    if (!confirmDelete(room?.name ? `room "${room.name}"` : "this room")) return;
     update("stay.rooms", (rooms) => rooms.filter((r) => r.id !== id));
   };
 

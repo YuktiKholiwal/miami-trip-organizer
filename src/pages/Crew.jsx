@@ -1,4 +1,5 @@
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 const emojis = ["✨", "🌴", "🍹", "🕶️", "🦩", "🌊", "🔆", "🎶", "🌅", "🍉", "💃", "🕺", "🌺", "🥥", "⚡", "🐬", "🪩", "🌷"];
 
@@ -25,7 +26,8 @@ export default function Crew() {
   };
 
   const removePerson = (id) => {
-    if (!confirm("Remove this person? They'll be cleared from flights/cars/rooms too.")) return;
+    const person = trip.people.find((p) => p.id === id);
+    if (!confirmDelete(person?.name ? `${person.name} from the crew` : "this person")) return;
     update("people", (people) => people.filter((p) => p.id !== id));
   };
 
@@ -67,13 +69,13 @@ export default function Crew() {
               placeholder="role / nickname"
               className="field-line mt-1 text-xs text-plum/70"
             />
-            <div className="mt-3 grid grid-cols-9 gap-1">
+            <div className="mt-3 grid grid-cols-5 sm:grid-cols-9 gap-1.5">
               {emojis.slice(0, 9).map((e) => (
                 <button
                   key={e}
                   onClick={() => editPerson(p.id, "emoji", e)}
-                  className={`aspect-square min-h-[32px] rounded-lg flex items-center justify-center text-base transition ${
-                    p.emoji === e ? "bg-plum text-cream" : "hover:bg-white active:bg-cream"
+                  className={`aspect-square min-h-[36px] rounded-lg flex items-center justify-center text-lg transition ${
+                    p.emoji === e ? "bg-plum text-cream" : "bg-white/60 hover:bg-white active:bg-cream"
                   }`}
                   aria-label={`Set emoji ${e}`}
                 >

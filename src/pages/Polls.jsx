@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 export default function Polls() {
   const { trip, update } = useTrip();
@@ -60,7 +61,8 @@ export default function Polls() {
   };
 
   const removePoll = (id) => {
-    if (!confirm("Delete this poll?")) return;
+    const poll = trip.polls.find((p) => p.id === id);
+    if (!confirmDelete(poll?.question ? `poll "${poll.question}"` : "this poll")) return;
     update("polls", (polls) => polls.filter((p) => p.id !== id));
   };
 

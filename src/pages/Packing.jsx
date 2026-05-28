@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 export default function Packing() {
   const { trip, update } = useTrip();
@@ -41,6 +42,9 @@ export default function Packing() {
   };
 
   const removeItem = (catId, itemId) => {
+    const cat = trip.packing.categories.find((c) => c.id === catId);
+    const item = cat?.items.find((i) => i.id === itemId);
+    if (!confirmDelete(item?.label ? `"${item.label}"` : "this item")) return;
     update("packing.categories", (cats) =>
       cats.map((c) =>
         c.id !== catId ? c : { ...c, items: c.items.filter((i) => i.id !== itemId) }

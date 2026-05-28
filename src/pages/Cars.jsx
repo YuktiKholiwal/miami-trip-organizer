@@ -1,4 +1,5 @@
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 export default function Cars() {
   const { trip, update } = useTrip();
@@ -38,6 +39,8 @@ export default function Cars() {
   };
 
   const removeCar = (id) => {
+    const car = trip.cars.find((c) => c.id === id);
+    if (!confirmDelete(car?.label ? `car "${car.label}"` : "this car")) return;
     update("cars", (cars) => cars.filter((c) => c.id !== id));
   };
 

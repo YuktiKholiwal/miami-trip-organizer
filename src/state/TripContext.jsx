@@ -194,7 +194,10 @@ export function TripProvider({ children }) {
     };
 
     const resetAll = () => {
-      if (!confirm("Reset all trip data to defaults? This can't be undone.")) return;
+      const input = window.prompt(
+        `Type "science" to reset ALL trip data back to defaults.\n\nThis wipes everyone's edits and can't be undone.`
+      );
+      if (input == null || input.trim().toLowerCase() !== "science") return;
       localStorage.removeItem(STORAGE_KEY);
       setTrip(seedTrip);
     };

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 const CATEGORIES = {
   stay: { label: "Stay", emoji: "🏨", color: "#FF3D8A" },
@@ -166,6 +167,8 @@ export default function MapPage() {
   };
 
   const removePlace = (id) => {
+    const place = trip.places.find((p) => p.id === id);
+    if (!confirmDelete(place?.name ? `pin "${place.name}"` : "this pin")) return;
     update("places", (places) => places.filter((p) => p.id !== id));
   };
 

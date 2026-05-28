@@ -1,4 +1,5 @@
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 const fmt = (iso) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
@@ -43,6 +44,9 @@ export default function Itinerary() {
   };
 
   const removeEvent = (dayId, eventId) => {
+    const day = trip.itinerary.find((d) => d.id === dayId);
+    const ev = day?.events.find((e) => e.id === eventId);
+    if (!confirmDelete(ev?.title ? `"${ev.title}"` : "this event")) return;
     update("itinerary", (days) =>
       days.map((d) =>
         d.id !== dayId

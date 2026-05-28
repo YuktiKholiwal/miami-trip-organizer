@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTrip } from "../state/TripContext.jsx";
+import { confirmDelete } from "../lib/confirmDelete.js";
 
 const money = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n || 0);
@@ -33,7 +34,9 @@ export default function Spend() {
   };
 
   const removeExpense = (id) => {
-    update("expenses", (xs) => xs.filter((x) => x.id !== id));
+    const x = trip.expenses.find((e) => e.id === id);
+    if (!confirmDelete(x?.title ? `"${x.title}"` : "this expense")) return;
+    update("expenses", (xs) => xs.filter((e) => e.id !== id));
   };
 
   const toggleSplit = (id) => {
@@ -278,7 +281,7 @@ export default function Spend() {
                 <div className="font-mono text-plum tabular-nums text-sm sm:text-base shrink-0">{money(x.amount)}</div>
                 <button
                   onClick={() => removeExpense(x.id)}
-                  className="icon-btn touch-show opacity-0 group-hover:opacity-100"
+                  className="icon-btn shrink-0"
                   aria-label="Remove expense"
                 >
                   ✕
