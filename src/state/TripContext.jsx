@@ -35,6 +35,32 @@ const canonical = (value) => {
   return "{" + keys.map((k) => JSON.stringify(k) + ":" + canonical(value[k])).join(",") + "}";
 };
 
+// 3-way merge at top-level-section granularity (people, expenses, stay,
+// itinerary, …). For each section: if WE changed it relative to `base`
+// (what we last knew was synced), our version wins; otherwise we keep
+// `theirs` (the latest from the DB, which may include another device's
+// changes). This is what stops one device's save of section A from
+// wiping section B that someone else just edited — the core fix for the
+// "expenses keep getting wiped" problem, since the trip is one shared blob.
+const threeWayMerge = (base, ours, theirs) => {
+  const result = structuredClone(seedTrip);
+  for (const key of Object.keys(result)) {
+    const ourVal = ours?.[key];
+    const theirVal = theirs?.[key];
+    if (ourVal === undefined) {
+      if (theirVal !== undefined) result[key] = theirVal;
+      continue;
+    }
+    const weChanged = base === null || canonical(ourVal) !== canonical(base?.[key]);
+    if (weChanged) {
+      result[key] = ourVal;
+    } else if (theirVal !== undefined) {
+      result[key] = theirVal;
+    }
+  }
+  return result;
+};
+
 // How long we keep an unacknowledged write in the pending-echo set before
 // giving up. Anything within this window is treated as "ours" if the
 // realtime payload matches.
@@ -48,17 +74,16 @@ export function TripProvider({ children }) {
   // is just the seed) or a client with stale localStorage would push its
   // data up and wipe everyone else's real edits before ever reading them.
   const [initialized, setInitialized] = useState(false);
-  // The latest snapshot we've written or accepted as authoritative.
-  // Used to skip no-op saves and to recognize duplicate echoes.
+  // Canonical JSON of the last state we know is in sync with the DB.
   const lastSyncedJson = useRef("");
+  // Object form of the same, used as the `base` for 3-way merges.
+  const lastSyncedData = useRef(null);
   // Every JSON snapshot we've written that we haven't yet seen echo back.
-  // Multiple writes can be in flight at once if the network is slow, so
-  // a single "latest" pointer is not enough — we have to track all of them.
   // Map<json, expiresAtMs>
   const pendingEchoes = useRef(new Map());
   const saveTimer = useRef(null);
-  // A live mirror of `trip` so async paths can read the current value
-  // without going through a stale closure.
+  // A live mirror of `trip` so async paths read the current value without
+  // going through a stale closure.
   const tripRef = useRef(trip);
 
   useEffect(() => {
@@ -70,10 +95,10 @@ export function TripProvider({ children }) {
   useEffect(() => {
     if (!supabaseEnabled) return;
     let active = true;
-    // Snapshot of what we loaded locally before talking to the server.
-    // Lets us tell "user hasn't touched anything since load" (safe to
-    // adopt remote) apart from "user typed during the fetch" (keep local).
-    const initialJson = canonical(tripRef.current);
+    // What we loaded locally before talking to the server — the merge base
+    // for the initial reconcile, so an edit made during the fetch window is
+    // preserved while everything else adopts the authoritative remote.
+    const initialData = structuredClone(tripRef.current);
 
     const prunePending = () => {
       const now = Date.now();
@@ -82,10 +107,20 @@ export function TripProvider({ children }) {
       }
     };
 
+    const adopt = (base, theirs) => {
+      const prev = tripRef.current;
+      const merged = threeWayMerge(base, prev, theirs);
+      lastSyncedData.current = theirs;
+      lastSyncedJson.current = canonical(theirs);
+      if (canonical(merged) !== canonical(prev)) {
+        setTrip(mergeWithSeed(merged));
+      }
+    };
+
     (async () => {
       const { data, error } = await supabase
         .from("trips")
-        .select("data, updated_at")
+        .select("data")
         .eq("id", TRIP_KEY)
         .maybeSingle();
 
@@ -93,33 +128,19 @@ export function TripProvider({ children }) {
       if (error) {
         console.warn("Supabase fetch failed", error);
         setSyncState("error");
-        // Stay un-initialized so saves remain blocked — we don't want to
-        // overwrite the DB when we couldn't even read it.
+        // Stay un-initialized so saves remain blocked — never overwrite the
+        // DB when we couldn't even read it.
         return;
       }
 
       if (data?.data) {
-        const remoteJson = canonical(data.data);
-        // Functional update so we compare against the CURRENT local state.
-        setTrip((prev) => {
-          const localJson = canonical(prev);
-          lastSyncedJson.current = remoteJson;
-          if (localJson === remoteJson) return prev; // already in sync
-          // The user hasn't edited anything since the page loaded, so the
-          // remote copy is authoritative — adopt it. This is the common
-          // case and is what prevents a fresh/stale client from later
-          // pushing its own data over the real DB.
-          if (localJson === initialJson) return mergeWithSeed(data.data);
-          // The user actively edited during the fetch window — keep those
-          // edits; the save effect will push them up once initialized.
-          return prev;
-        });
+        adopt(initialData, data.data);
       } else {
-        // No remote row exists yet — seed it from current local state.
+        // No remote row yet — seed it from current local state.
         const current = tripRef.current;
-        const currentJson = canonical(current);
-        lastSyncedJson.current = currentJson;
-        pendingEchoes.current.set(currentJson, Date.now() + ECHO_TTL_MS);
+        lastSyncedData.current = current;
+        lastSyncedJson.current = canonical(current);
+        pendingEchoes.current.set(lastSyncedJson.current, Date.now() + ECHO_TTL_MS);
         const { error: upErr } = await supabase
           .from("trips")
           .upsert({ id: TRIP_KEY, data: current, updated_at: new Date().toISOString() });
@@ -148,16 +169,10 @@ export function TripProvider({ children }) {
             pendingEchoes.current.delete(remoteJson);
             return;
           }
-          // Already reflects current synced state — no-op.
           if (remoteJson === lastSyncedJson.current) return;
-          // Genuine remote change — adopt. Guard against the merged
-          // result being canonically identical to current local state,
-          // which would otherwise trigger a redundant save cycle.
-          lastSyncedJson.current = remoteJson;
-          setTrip((prev) => {
-            const merged = mergeWithSeed(remote);
-            return canonical(merged) === canonical(prev) ? prev : merged;
-          });
+          // Genuine remote change — merge it in, preserving any local
+          // unsaved edits to sections we touched.
+          adopt(lastSyncedData.current, remote);
         }
       )
       .subscribe();
@@ -169,10 +184,9 @@ export function TripProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced push to Supabase whenever local trip diverges from synced
-  // state. Gated on `initialized`: until the first fetch has resolved we
-  // never write, so a client can't clobber the DB with seed/stale data
-  // before it has read what's already there.
+  // Debounced push to Supabase. Gated on `initialized` so a client never
+  // writes before it has read. Uses read-modify-write with a 3-way merge so
+  // it only overwrites the sections this device actually changed.
   useEffect(() => {
     if (!supabaseEnabled || !initialized) return;
     const tripJson = canonical(trip);
@@ -180,16 +194,35 @@ export function TripProvider({ children }) {
     setSyncState((s) => (s === "error" ? s : "saving"));
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(async () => {
-      lastSyncedJson.current = tripJson;
-      pendingEchoes.current.set(tripJson, Date.now() + ECHO_TTL_MS);
+      // Re-read the latest so we merge on top of anyone else's changes.
+      let theirs = null;
+      const { data: fresh, error: readErr } = await supabase
+        .from("trips")
+        .select("data")
+        .eq("id", TRIP_KEY)
+        .maybeSingle();
+      if (!readErr && fresh?.data) theirs = fresh.data;
+
+      const ours = tripRef.current;
+      const toWrite = theirs ? threeWayMerge(lastSyncedData.current, ours, theirs) : ours;
+      const toWriteJson = canonical(toWrite);
+
+      lastSyncedJson.current = toWriteJson;
+      lastSyncedData.current = toWrite;
+      pendingEchoes.current.set(toWriteJson, Date.now() + ECHO_TTL_MS);
+
       const { error } = await supabase
         .from("trips")
-        .upsert({ id: TRIP_KEY, data: trip, updated_at: new Date().toISOString() });
+        .upsert({ id: TRIP_KEY, data: toWrite, updated_at: new Date().toISOString() });
       if (error) {
         console.warn("Supabase save failed", error);
         setSyncState("error");
-      } else {
-        setSyncState("synced");
+        return;
+      }
+      setSyncState("synced");
+      // If the merge pulled in remote changes, reflect them locally.
+      if (toWriteJson !== canonical(tripRef.current)) {
+        setTrip(mergeWithSeed(toWrite));
       }
     }, 400);
     return () => clearTimeout(saveTimer.current);
