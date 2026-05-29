@@ -35,7 +35,6 @@ const canonical = (value) => {
   return "{" + keys.map((k) => JSON.stringify(k) + ":" + canonical(value[k])).join(",") + "}";
 };
 
-const seedJson = canonical(seedTrip);
 // How long we keep an unacknowledged write in the pending-echo set before
 // giving up. Anything within this window is treated as "ours" if the
 // realtime payload matches.
@@ -44,6 +43,11 @@ const ECHO_TTL_MS = 60_000;
 export function TripProvider({ children }) {
   const [trip, setTrip] = useState(loadLocal);
   const [syncState, setSyncState] = useState(supabaseEnabled ? "connecting" : "local");
+  // False until the very first fetch from Supabase has resolved. We must
+  // NOT write to the DB before this, otherwise a fresh client (whose state
+  // is just the seed) or a client with stale localStorage would push its
+  // data up and wipe everyone else's real edits before ever reading them.
+  const [initialized, setInitialized] = useState(false);
   // The latest snapshot we've written or accepted as authoritative.
   // Used to skip no-op saves and to recognize duplicate echoes.
   const lastSyncedJson = useRef("");
@@ -66,6 +70,10 @@ export function TripProvider({ children }) {
   useEffect(() => {
     if (!supabaseEnabled) return;
     let active = true;
+    // Snapshot of what we loaded locally before talking to the server.
+    // Lets us tell "user hasn't touched anything since load" (safe to
+    // adopt remote) apart from "user typed during the fetch" (keep local).
+    const initialJson = canonical(tripRef.current);
 
     const prunePending = () => {
       const now = Date.now();
@@ -85,25 +93,29 @@ export function TripProvider({ children }) {
       if (error) {
         console.warn("Supabase fetch failed", error);
         setSyncState("error");
+        // Stay un-initialized so saves remain blocked — we don't want to
+        // overwrite the DB when we couldn't even read it.
         return;
       }
 
       if (data?.data) {
         const remoteJson = canonical(data.data);
-        // Use functional update so we compare against the CURRENT local
-        // state — the user may have edited things during the fetch.
+        // Functional update so we compare against the CURRENT local state.
         setTrip((prev) => {
           const localJson = canonical(prev);
           lastSyncedJson.current = remoteJson;
-          if (localJson === remoteJson) return prev;
-          // Local is just the seed (untouched) — adopt remote.
-          if (localJson === seedJson) return mergeWithSeed(data.data);
-          // Local has user edits — keep them; the save effect will push
-          // them up because trip !== lastSyncedJson.
+          if (localJson === remoteJson) return prev; // already in sync
+          // The user hasn't edited anything since the page loaded, so the
+          // remote copy is authoritative — adopt it. This is the common
+          // case and is what prevents a fresh/stale client from later
+          // pushing its own data over the real DB.
+          if (localJson === initialJson) return mergeWithSeed(data.data);
+          // The user actively edited during the fetch window — keep those
+          // edits; the save effect will push them up once initialized.
           return prev;
         });
       } else {
-        // No remote row — seed it from current local state.
+        // No remote row exists yet — seed it from current local state.
         const current = tripRef.current;
         const currentJson = canonical(current);
         lastSyncedJson.current = currentJson;
@@ -118,6 +130,7 @@ export function TripProvider({ children }) {
         }
       }
       setSyncState("synced");
+      setInitialized(true); // unblock saves now that we've reconciled
     })();
 
     const channel = supabase
@@ -156,9 +169,12 @@ export function TripProvider({ children }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Debounced push to Supabase whenever local trip diverges from synced state
+  // Debounced push to Supabase whenever local trip diverges from synced
+  // state. Gated on `initialized`: until the first fetch has resolved we
+  // never write, so a client can't clobber the DB with seed/stale data
+  // before it has read what's already there.
   useEffect(() => {
-    if (!supabaseEnabled) return;
+    if (!supabaseEnabled || !initialized) return;
     const tripJson = canonical(trip);
     if (tripJson === lastSyncedJson.current) return;
     setSyncState((s) => (s === "error" ? s : "saving"));
@@ -178,7 +194,7 @@ export function TripProvider({ children }) {
     }, 400);
     return () => clearTimeout(saveTimer.current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip]);
+  }, [trip, initialized]);
 
   const value = useMemo(() => {
     const update = (path, updater) => {
