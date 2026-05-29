@@ -8,12 +8,21 @@
 // here to stop friends tapping delete, not a determined attacker.
 const SECRET_KEY = "science";
 
+// Once the correct key is entered, the device stays unlocked for the rest
+// of the session (until a full reload/close). Kept in memory only — never
+// persisted — so it can't leak via storage and resets when the app closes.
+let unlocked = false;
+
 function askForKey(promptText, wrongText) {
+  if (unlocked) return true;
   const input = window.prompt(promptText);
   if (input == null) return false;
-  const ok = input.trim().toLowerCase() === SECRET_KEY;
-  if (!ok) window.alert(wrongText);
-  return ok;
+  if (input.trim().toLowerCase() === SECRET_KEY) {
+    unlocked = true;
+    return true;
+  }
+  window.alert(wrongText);
+  return false;
 }
 
 export function confirmDelete(label = "this") {
