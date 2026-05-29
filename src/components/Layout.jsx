@@ -29,7 +29,7 @@ const syncBadge = {
 };
 
 export default function Layout({ children }) {
-  const { trip, resetAll, syncState } = useTrip();
+  const { trip, resetAll, syncState, buildId } = useTrip();
   const badge = syncBadge[syncState] || syncBadge.local;
   const location = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -110,6 +110,7 @@ export default function Layout({ children }) {
 
       <footer className="hidden md:block max-w-7xl mx-auto px-6 py-10 text-center text-xs text-plum/50">
         made with 🧡 for the crew · May 29 – June 1, 2026
+        <span className="ml-2 text-plum/30">build {buildId}</span>
       </footer>
 
       {/* Mobile bottom tab bar */}
@@ -176,7 +177,7 @@ export default function Layout({ children }) {
               ))}
             </div>
             <div className="px-5 pb-4 flex items-center justify-between text-xs text-plum/50">
-              <span>made with 🧡 · may 29 – jun 1</span>
+              <span>build {buildId}</span>
               <button onClick={resetAll} className="text-plum/40 hover:text-flamingo">↺ reset</button>
             </div>
           </div>

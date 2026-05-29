@@ -66,6 +66,32 @@ const threeWayMerge = (base, ours, theirs) => {
 // realtime payload matches.
 const ECHO_TTL_MS = 60_000;
 
+export const BUILD_ID = typeof __BUILD_ID__ !== "undefined" ? __BUILD_ID__ : "dev";
+
+// Compact summary of a trip blob's record counts, for diagnostics.
+const counts = (t) =>
+  t && typeof t === "object"
+    ? `people=${t.people?.length ?? "?"} exp=${t.expenses?.length ?? "?"} places=${t.places?.length ?? "?"} polls=${t.polls?.length ?? "?"}`
+    : "none";
+
+// Logs to the console AND a capped in-memory ring buffer reachable from the
+// devtools console as `window.__miamiSync` — so we can inspect exactly what
+// each device fetched/wrote when the DB looks wiped.
+const log = (...args) => {
+  try {
+    // eslint-disable-next-line no-console
+    console.log("[miami-sync]", ...args);
+    const buf = (window.__miamiSync = window.__miamiSync || []);
+    buf.push(`${new Date().toISOString().slice(11, 23)} ${args.join(" ")}`);
+    if (buf.length > 300) buf.shift();
+  } catch {
+    /* ignore */
+  }
+};
+
+// True only if the blob actually carries usable trip data (not null/{}).
+const hasRealData = (d) => !!d && typeof d === "object" && Object.keys(d).length > 0;
+
 export function TripProvider({ children }) {
   const [trip, setTrip] = useState(loadLocal);
   const [syncState, setSyncState] = useState(supabaseEnabled ? "connecting" : "local");
@@ -95,6 +121,7 @@ export function TripProvider({ children }) {
   useEffect(() => {
     if (!supabaseEnabled) return;
     let active = true;
+    log("startup build", BUILD_ID, "| local", counts(tripRef.current));
     // What we loaded locally before talking to the server — the merge base
     // for the initial reconcile, so an edit made during the fetch window is
     // preserved while everything else adopts the authoritative remote.
@@ -107,9 +134,10 @@ export function TripProvider({ children }) {
       }
     };
 
-    const adopt = (base, theirs) => {
+    const adopt = (base, theirs, why) => {
       const prev = tripRef.current;
       const merged = threeWayMerge(base, prev, theirs);
+      log(why, "| base", counts(base), "| local", counts(prev), "| remote", counts(theirs), "=> show", counts(merged));
       lastSyncedData.current = theirs;
       lastSyncedJson.current = canonical(theirs);
       if (canonical(merged) !== canonical(prev)) {
@@ -127,17 +155,21 @@ export function TripProvider({ children }) {
       if (!active) return;
       if (error) {
         console.warn("Supabase fetch failed", error);
+        log("fetch ERROR", error.message, "- saves stay blocked");
         setSyncState("error");
         // Stay un-initialized so saves remain blocked — never overwrite the
         // DB when we couldn't even read it.
         return;
       }
 
-      if (data?.data) {
-        adopt(initialData, data.data);
+      log("fetch ok | remote", hasRealData(data?.data) ? counts(data.data) : "NO REAL DATA");
+
+      if (hasRealData(data?.data)) {
+        adopt(initialData, data.data, "initial adopt");
       } else {
-        // No remote row yet — seed it from current local state.
+        // No usable remote row yet — seed it from current local state.
         const current = tripRef.current;
+        log("seeding empty DB with", counts(current));
         lastSyncedData.current = current;
         lastSyncedJson.current = canonical(current);
         pendingEchoes.current.set(lastSyncedJson.current, Date.now() + ECHO_TTL_MS);
@@ -146,6 +178,7 @@ export function TripProvider({ children }) {
           .upsert({ id: TRIP_KEY, data: current, updated_at: new Date().toISOString() });
         if (upErr) {
           console.warn("Supabase init upsert failed", upErr);
+          log("init upsert ERROR", upErr.message);
           setSyncState("error");
           return;
         }
@@ -167,12 +200,13 @@ export function TripProvider({ children }) {
           // Echo of a write we initiated (any still-pending one).
           if (pendingEchoes.current.has(remoteJson)) {
             pendingEchoes.current.delete(remoteJson);
+            log("realtime echo (ours, ignored)", counts(remote));
             return;
           }
           if (remoteJson === lastSyncedJson.current) return;
           // Genuine remote change — merge it in, preserving any local
           // unsaved edits to sections we touched.
-          adopt(lastSyncedData.current, remote);
+          adopt(lastSyncedData.current, remote, "realtime adopt");
         }
       )
       .subscribe();
@@ -201,11 +235,17 @@ export function TripProvider({ children }) {
         .select("data")
         .eq("id", TRIP_KEY)
         .maybeSingle();
-      if (!readErr && fresh?.data) theirs = fresh.data;
+      if (!readErr && hasRealData(fresh?.data)) theirs = fresh.data;
 
       const ours = tripRef.current;
       const toWrite = theirs ? threeWayMerge(lastSyncedData.current, ours, theirs) : ours;
       const toWriteJson = canonical(toWrite);
+
+      log(
+        "SAVE | local", counts(ours),
+        "| db-now", theirs ? counts(theirs) : (readErr ? "READ-ERR" : "none"),
+        "=> writing", counts(toWrite)
+      );
 
       lastSyncedJson.current = toWriteJson;
       lastSyncedData.current = toWrite;
@@ -216,6 +256,7 @@ export function TripProvider({ children }) {
         .upsert({ id: TRIP_KEY, data: toWrite, updated_at: new Date().toISOString() });
       if (error) {
         console.warn("Supabase save failed", error);
+        log("SAVE ERROR", error.message);
         setSyncState("error");
         return;
       }
@@ -255,7 +296,7 @@ export function TripProvider({ children }) {
       setTrip(seedTrip);
     };
 
-    return { trip, setTrip, update, resetAll, syncState };
+    return { trip, setTrip, update, resetAll, syncState, buildId: BUILD_ID };
   }, [trip, syncState]);
 
   return <TripContext.Provider value={value}>{children}</TripContext.Provider>;
