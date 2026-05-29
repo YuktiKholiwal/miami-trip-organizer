@@ -10,4 +10,9 @@ export const supabase = supabaseEnabled ? createClient(url, anon, {
   realtime: { params: { eventsPerSecond: 5 } },
 }) : null;
 
-export const TRIP_KEY = TRIP_ID;
+// The live data lives under a versioned key. Older cached builds of the
+// app (which had the data-wiping bug) read/write the un-versioned key, so
+// bumping this isolates the real data from any stale client that hasn't
+// updated yet. PREV_TRIP_KEY is read once to migrate existing data forward.
+export const TRIP_KEY = `${TRIP_ID}-v2`;
+export const PREV_TRIP_KEY = TRIP_ID;

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { seedTrip } from "./seed";
-import { supabase, supabaseEnabled, TRIP_KEY } from "./supabase";
+import { supabase, supabaseEnabled, TRIP_KEY, PREV_TRIP_KEY } from "./supabase";
 
 const STORAGE_KEY = "miami-trip-v1";
 const TripContext = createContext(null);
@@ -164,10 +164,37 @@ export function TripProvider({ children }) {
 
       log("fetch ok | remote", hasRealData(data?.data) ? counts(data.data) : "NO REAL DATA");
 
-      if (hasRealData(data?.data)) {
-        adopt(initialData, data.data, "initial adopt");
+      let remoteData = hasRealData(data?.data) ? data.data : null;
+      let migrated = false;
+
+      // One-time migration: if the new key has nothing yet, pull whatever
+      // the previous key holds so existing trip data carries forward.
+      if (!remoteData) {
+        const { data: prev, error: prevErr } = await supabase
+          .from("trips")
+          .select("data")
+          .eq("id", PREV_TRIP_KEY)
+          .maybeSingle();
+        if (!active) return;
+        if (!prevErr && hasRealData(prev?.data)) {
+          remoteData = prev.data;
+          migrated = true;
+          log("migrating data from previous key", counts(remoteData));
+        }
+      }
+
+      if (remoteData) {
+        adopt(initialData, remoteData, "initial adopt");
+        // If we pulled from the old key, persist it under the new key so it
+        // becomes the source of truth going forward.
+        if (migrated) {
+          pendingEchoes.current.set(canonical(remoteData), Date.now() + ECHO_TTL_MS);
+          await supabase
+            .from("trips")
+            .upsert({ id: TRIP_KEY, data: remoteData, updated_at: new Date().toISOString() });
+        }
       } else {
-        // No usable remote row yet — seed it from current local state.
+        // No usable remote row anywhere yet — seed it from current local state.
         const current = tripRef.current;
         log("seeding empty DB with", counts(current));
         lastSyncedData.current = current;
