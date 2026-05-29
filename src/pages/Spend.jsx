@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTrip } from "../state/TripContext.jsx";
-import { confirmDelete } from "../lib/confirmDelete.js";
+import { confirmDelete, confirmSecret } from "../lib/confirmDelete.js";
 
 const money = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n || 0);
@@ -18,6 +18,7 @@ export default function Spend() {
   const addExpense = () => {
     const amt = parseFloat(draft.amount);
     if (!draft.title.trim() || isNaN(amt) || amt <= 0 || !draft.paidBy || draft.splitWith.length === 0) return;
+    if (!confirmSecret("add an expense")) return;
     update("expenses", (xs) => [
       ...xs,
       {

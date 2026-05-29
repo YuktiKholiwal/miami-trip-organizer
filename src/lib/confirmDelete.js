@@ -8,14 +8,25 @@
 // here to stop friends tapping delete, not a determined attacker.
 const SECRET_KEY = "science";
 
-export function confirmDelete(label = "this") {
-  const input = window.prompt(
-    `Enter the secret key to delete ${label}.\n\n(If you don't know it, ask the trip captain — this can't be undone.)`
-  );
+function askForKey(promptText, wrongText) {
+  const input = window.prompt(promptText);
   if (input == null) return false;
   const ok = input.trim().toLowerCase() === SECRET_KEY;
-  if (!ok) {
-    window.alert("Wrong key — nothing was deleted.");
-  }
+  if (!ok) window.alert(wrongText);
   return ok;
+}
+
+export function confirmDelete(label = "this") {
+  return askForKey(
+    `Enter the secret key to delete ${label}.\n\n(If you don't know it, ask the trip captain — this can't be undone.)`,
+    "Wrong key — nothing was deleted."
+  );
+}
+
+// Gate a non-delete action (e.g. adding an expense) behind the same key.
+export function confirmSecret(action = "continue") {
+  return askForKey(
+    `Enter the secret key to ${action}.\n\n(If you don't know it, ask the trip captain.)`,
+    "Wrong key — cancelled."
+  );
 }
